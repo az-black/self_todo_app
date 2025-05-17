@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:todoapp/homeScreen.dart';
 
-void main(){
+void main() {
   runApp(const MyApp());
 }
 
@@ -18,6 +18,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: HomeScreen(),
+      theme: ThemeData.dark(useMaterial3: true),
     );
   }
 }

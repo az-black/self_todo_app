@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todoapp/addTodo.dart';
+import 'package:todoapp/widgets/drawer.dart';
+import 'package:todoapp/widgets/todoList.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,48 +12,108 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String text = 'Belum ada todo';
+  bool _isBottomSheetOpen = false;
 
-  void changeText(todoText) {
+  String text = '';
+
+  List<String> todoList = [];
+
+  void addTodo({required String todoText}) {
+    if (todoList.contains(todoText)) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Data Sudah Ada'),
+            content: Text('Data ini sudah ada'),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Close'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
     setState(() {
-      text = 'Hallo Dunia';
+      todoList.insert(0, todoText);
+    });
+    updateLocalData();
+    Navigator.pop(context);
+  }
+
+  void updateLocalData() async {
+    // Obtain shared preferences.
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('todoList', todoList);
+  }
+
+  void loadData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final loadedList = (prefs.getStringList("todoList") ?? []).toList();
+
+    setState(() {
+      todoList = loadedList;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  void FloatButton() {
+    setState(() {
+      _isBottomSheetOpen = true;
+    });
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: MediaQuery.of(context).viewInsets,
+          child: AddTodo(addTodo: addTodo),
+        );
+      },
+    ).whenComplete(() {
+      setState(() {
+        _isBottomSheetOpen = false;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(),
+      drawer: DrawerList(),
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Colors.white),
-        backgroundColor: Colors.black,
         centerTitle: true,
-        title: Text(
-          'Todo App',
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: Text('Todo App', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Container(
-        padding: EdgeInsets.all(20),
+        color: Colors.blueGrey[900],
+        padding: EdgeInsets.all(15),
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.greenAccent, Colors.amberAccent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        child: Column(
+          children: [
+            Expanded(
+              child: TodoList(
+                todoList: todoList,
+                updateLocalData: updateLocalData,
+              ),
+            ),
+            Text('$text'),
+          ],
         ),
-        child: AddTodo(changeText: ({required String todoText}) {
-          setState(() {
-            text: todoText;
-          });
-          
-        },),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: FloatButton,
+        child: Icon(_isBottomSheetOpen ? Icons.close : Icons.add),
       ),
     );
   }
